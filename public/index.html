@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Facebook Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background-color: #f0f2f5; }
+        .container { background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
+        #status { margin-top: 20px; font-weight: bold; }
+        #loginButton, #logoutButton {
+            background-color: #1877f2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 15px;
+        }
+        #logoutButton { background-color: #dc3545; display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Your CRM</h1>
+        <div id="status">Please log in to continue.</div>
+        <button id="loginButton" onclick="logInWithFacebook()">Login with Facebook</button>
+        <button id="logoutButton" onclick="logOutFromFacebook()">Logout</button>
+    </div>
+
+    <div id="fb-root"></div>
+
+    <script>
+        // Replace with your actual Facebook App ID
+        const YOUR_FACEBOOK_APP_ID = '1651117795568495';
+
+        // 1. Initialize the Facebook SDK
+        window.fbAsyncInit = function() {
+            FB.init({
+                appId      : YOUR_FACEBOOK_APP_ID,
+                cookie     : true, // Enable cookies to allow the server to access the session
+                xfbml      : true, // Parse social plugins on this page
+                version    : 'v19.0' // Use the latest API version (check developer.facebook.com for current)
+            });
+
+            // Check the user's login status right after initialization
+            FB.getLoginStatus(function(response) {
+                statusChangeCallback(response);
+            });
+        };
+
+        // 2. Load the Facebook SDK asynchronously
+        (function(d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) return;
+            js = d.createElement(s); js.id = id;
+            js.src = "https://connect.facebook.net/en_US/sdk.js";
+            fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));
+
+        // 3. Callback function for login status changes
+        function statusChangeCallback(response) {
+            const statusDiv = document.getElementById('status');
+            const loginBtn = document.getElementById('loginButton');
+            const logoutBtn = document.getElementById('logoutButton');
+
+            if (response.status === 'connected') {
+                // The user is logged in and has authenticated your app.
+                statusDiv.innerHTML = 'Logged in to Facebook. Fetching profile...';
+                loginBtn.style.display = 'none';
+                logoutBtn.style.display = 'block';
+
+                // Fetch user profile information (optional, but good for CRM)
+                FB.api('/me', { fields: 'name,email,picture' }, function(userResponse) {
+                    if (userResponse && !userResponse.error) {
+                        statusDiv.innerHTML = `Welcome, ${userResponse.name}! You are connected.<br>User ID: ${response.authResponse.userID}<br>Access Token: ${response.authResponse.accessToken.substring(0, 30)}...`;
+                        // At this point, you have the user's access token (response.authResponse.accessToken).
+                        // You should send this token to your backend server for further processing.
+                        // Example: sendAccessTokenToBackend(response.authResponse.accessToken, response.authResponse.userID);
+                        console.log("Full Access Token:", response.authResponse.accessToken); // For debugging
+                    }
+                });
+
+            } else if (response.status === 'not_authorized') {
+                // The user is logged in to Facebook, but has not authenticated your app.
+                statusDiv.innerHTML = 'Please log in to Facebook and grant permissions to the app.';
+                loginBtn.style.display = 'block';
+                logoutBtn.style.display = 'none';
+            } else {
+                // The user is not logged in to Facebook.
+                statusDiv.innerHTML = 'Not logged in to Facebook.';
+                loginBtn.style.display = 'block';
+                logoutBtn.style.display = 'none';
+            }
+        }
+
+        // 4. Function to trigger Facebook Login
+        function logInWithFacebook() {
+            FB.login(function(response) {
+                statusChangeCallback(response);
+            }, {
+                // Request specific permissions (scopes)
+                scope: 'public_profile,email,ads_read,leads_retrieval,pages_show_list,pages_read_engagement,pages_manage_ads',
+                return_scopes: true // To get a list of granted scopes in the response
+            });
+        }
+
+        // 5. Function to log out from Facebook
+        function logOutFromFacebook() {
+            FB.logout(function(response) {
+                statusChangeCallback(response);
+            });
+        }
+    </script>
+</body>
+</html>
